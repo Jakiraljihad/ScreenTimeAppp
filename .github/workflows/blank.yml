@@ -1,0 +1,48 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Find and Extract ZIP if exists
+        run: |
+          ZIP=$(find . -maxdepth 2 -name "*.zip" | head -1)
+          if [ -n "$ZIP" ]; then
+            echo "Found ZIP: $ZIP"
+            unzip -o "$ZIP" -d extracted/
+            cp -r extractapked/ScreenTimeApp/* . 2>/dev/null || cp -r extracted/*/* . 2>/dev/null || cp -r extracted/* . 2>/dev/null
+            rm -rf extracted "$ZIP"
+            echo "Extracted and cleaned up"
+          else
+            echo "No ZIP found, using existing files"
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          namScreenTimeApp-APKAPK
+          path: app/build/outputs/apk/debug/app-debug.apk
